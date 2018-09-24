@@ -1,0 +1,203 @@
+C51 COMPILER V9.01   MAIN                                                                  09/24/2018 08:20:01 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: D:\keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "reg52.h"
+   2          
+   3          typedef unsigned char u8;
+   4          typedef unsigned int u16;
+   5          
+   6          sbit lnL1=P2^0; //l298n信号管脚定义
+   7          sbit lnL2=P2^1;
+   8          
+   9          sbit lnR1=P2^2;
+  10          sbit lnR2=P2^3;
+  11          
+  12          sbit PWM = P2^4;          //电机调速信号线
+  13          sbit pwm = P2^5;
+  14          
+  15          u16 ReceiveDate;
+  16          
+  17          u8 count = 70, time=0;
+  18            
+  19          void UsartInit()   //串口初始化函数
+  20          {
+  21   1              SCON=0X50;              //设置为工作方式1
+  22   1              TMOD=0X20|0X01;         //设置计数器工作方式2
+  23   1              PCON=0X00;              //波特率不加倍
+  24   1      
+  25   1              TH1=0XFD;               //计数器初始值设置，注意波特率是9600的
+  26   1              TL1=0XFD;
+  27   1      
+  28   1              ES=1;                   //打开接收中断
+  29   1              EA=1;                   //打开总中断
+  30   1              TR1=1;                  //打开计数器
+  31   1      }
+  32          
+  33          
+  34          
+  35            
+  36          void init0()  
+  37          {  
+  38   1          //TMOD = 0x01;    // 方式一  
+  39   1          TH0 = 0xFC;     // 赋初值 定时1ms 
+  40   1          TL0 = 0x18;  
+  41   1          TR0 = 1;       // 开启定时器0 
+  42   1              //EA=1;   
+  43   1          ET0 = 1;       // 定时器0允许中断  
+  44   1      }  
+  45                  
+  46          
+  47          void left()
+  48          { 
+  49   1         lnL1=0;
+  50   1         lnL2=1;
+  51   1      
+  52   1         lnR1=1;
+  53   1         lnR2=0;
+  54   1      
+  55   1      }
+C51 COMPILER V9.01   MAIN                                                                  09/24/2018 08:20:01 PAGE 2   
+
+  56          
+  57          void right()
+  58          { 
+  59   1              lnL1=1;
+  60   1          lnL2=0;
+  61   1      
+  62   1          lnR1=0;
+  63   1          lnR2=1;
+  64   1      }
+  65          
+  66          void forward()
+  67          { 
+  68   1         lnL1=1;
+  69   1         lnL2=0;
+  70   1      
+  71   1         lnR1=1;
+  72   1         lnR2=0;
+  73   1      }
+  74          
+  75          void back()
+  76          { 
+  77   1              lnL1=0;
+  78   1          lnL2=1;
+  79   1      
+  80   1          lnR1=0;
+  81   1          lnR2=1;
+  82   1      }
+  83          
+  84          void stop()
+  85          { 
+  86   1         lnL1=0;
+  87   1         lnL2=0;
+  88   1      
+  89   1         lnR1=0;
+  90   1         lnR2=0;
+  91   1      }
+  92          
+  93          
+  94          void func()
+  95          {
+  96   1        switch (ReceiveDate)
+  97   1         {
+  98   2           case '2':forward();ReceiveDate=100;break;
+  99   2           case '4':left();ReceiveDate=100;break;
+ 100   2           case '6':right();ReceiveDate=100;break;
+ 101   2           case '8':back();ReceiveDate=100;break;
+ 102   2           case '0':stop();ReceiveDate=100;break;
+ 103   2      
+ 104   2           case 'A':forward();ReceiveDate=100;break;
+ 105   2           case 'G':left();ReceiveDate=100;break;
+ 106   2           case 'C':right();ReceiveDate=100;break;
+ 107   2           case 'E':back();ReceiveDate=100;break;
+ 108   2           case 'Z':stop();ReceiveDate=100;break;
+ 109   2      
+ 110   2               case '1': 
+ 111   2                  count = 20;  
+ 112   2                      ReceiveDate=100;break;
+ 113   2               case '3': 
+ 114   2                  count = 40; 
+ 115   2                      ReceiveDate=100;break;
+ 116   2           case '5': 
+ 117   2                  count = 50;  
+C51 COMPILER V9.01   MAIN                                                                  09/24/2018 08:20:01 PAGE 3   
+
+ 118   2                      ReceiveDate=100;break;
+ 119   2               case '7': 
+ 120   2                  count = 80;  
+ 121   2                      ReceiveDate=100;break;
+ 122   2               case '9':
+ 123   2                  count = 100; 
+ 124   2                      ReceiveDate=100;   break;
+ 125   2         }
+ 126   1      
+ 127   1      }
+ 128          
+ 129          void main()
+ 130          {
+ 131   1          UsartInit();
+ 132   1              init0();
+ 133   1          while(1)
+ 134   1         {
+ 135   2           func();
+ 136   2         }
+ 137   1      
+ 138   1      }
+ 139          
+ 140          
+ 141          void Usart() interrupt 4
+ 142          { 
+ 143   1         if(RI==1)
+ 144   1         {
+ 145   2            ReceiveDate=SBUF;
+ 146   2            RI=0;
+ 147   2            SBUF=ReceiveDate;
+ 148   2            while(!TI);  
+ 149   2            TI = 0; 
+ 150   2         }
+ 151   1      }
+ 152          
+ 153          void T0_inter() interrupt 1  
+ 154          {  
+ 155   1          
+ 156   1          TH0 = 0xFF;  
+ 157   1          TL0 = 0x47;  
+ 158   1          
+ 159   1          time ++ ;  
+ 160   1          if (time <= count)
+ 161   1              {
+ 162   2                 PWM = 1;
+ 163   2                 pwm = 1;
+ 164   2              }     
+ 165   1          if (time > count)   
+ 166   1               {
+ 167   2                 PWM = 0;
+ 168   2                 pwm = 0;
+ 169   2               }  
+ 170   1      
+ 171   1          if (time >= 100)   time = 0; 
+ 172   1            
+ 173   1      }  
+ 174          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    293    ----
+   CONSTANT SIZE    =   ----    ----
+C51 COMPILER V9.01   MAIN                                                                  09/24/2018 08:20:01 PAGE 4   
+
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
